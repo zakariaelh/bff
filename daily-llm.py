@@ -17,6 +17,8 @@ from scenes.story_intro_scene import StoryIntroScene
 from scenes.start_listening_scene import StartListeningScene
 from auth import get_meeting_token, get_room_name
 
+from scenes.story_grandma_scene import StoryGrandmaScene
+
 load_dotenv()
 
 class DailyLLM(EventHandler):
@@ -34,6 +36,8 @@ class DailyLLM(EventHandler):
         else:
             duration = int(duration)
         self.expiration = time.time() + duration
+
+        self.__time = time.time()
 
         # room + bot details
         self.room_url = room_url
@@ -144,7 +148,14 @@ class DailyLLM(EventHandler):
             }
         })
 
+        print("ALL participants", self.client.participants())
         self.my_participant_id = self.client.participants()['local']['id']
+
+    def ingest_video_frames(self, pid):
+        self.client.set_video_renderer(
+            pid,
+            self.on_video_frame
+        )
 
     def call_joined(self, join_data, client_error):
         self.logger.info(f"call_joined: {join_data}, {client_error}")
@@ -152,6 +163,7 @@ class DailyLLM(EventHandler):
 
     def on_participant_joined(self, participant):
         self.logger.info(f"on_participant_joined: {participant}")
+        self.ingest_video_frames(participant['id'])
         self.client.send_app_message({ "event": "story-id", "storyID": self.story_id})
         self.wave()
         time.sleep(2)
@@ -174,7 +186,7 @@ class DailyLLM(EventHandler):
 
     def on_transcription_message(self, message):
         # TODO: This should maybe match on my own participant id instead but I'm in a hurry
-        if message['session_id'] != self.my_participant_id:
+        if message['participantId'] != self.my_participant_id:
             if self.orchestrator.started_listening_at:
                 # TODO: Check actual transcription timestamp against started_listening_at
                 self.transcription += f" {message['text']}"
@@ -186,6 +198,15 @@ class DailyLLM(EventHandler):
                     self.logger.info(f"✏️ Got a transcription fragment: \"{self.transcription}\"")
                     self.last_fragment_at = time.time()
 
+    def on_app_message(self, message, sender):
+        self.orchestrator.enqueue(StoryGrandmaScene, sentence=message['message'])
+        # print(message)
+        pass 
+
+    def on_video_frame(self, participant_id, video_frame):
+        if time.time() - self.__time > 1:
+            self.__time = time.time()
+            print(video_frame)
 
     def set_image(self, image):
         self.image = image

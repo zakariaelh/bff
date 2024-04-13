@@ -2,7 +2,7 @@ daily-python
 python-dotenv
 imageio-ffmpeg
 imageio
-openai
+openai==0.28
 python-dotenv
 google-cloud-texttospeech
 azure-cognitiveservices-speech

@@ -8,7 +8,7 @@ from flask_cors import CORS
 from auth import get_meeting_token
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"*": {"origins": "*"}})
 
 @app.route('/spin-up-bot', methods=['POST'])
 def spin_up_bot():
@@ -25,11 +25,13 @@ def spin_up_bot():
                                 'enable_chat':True,
                                 'enable_emoji_reactions': True,
                                 'eject_at_room_exp': True,
-                                'enable_prejoin_ui': False,
+                                'enable_prejoin_ui': False
                             }
                         })
     if res.status_code != 200:
+        print(res.text)
         return jsonify({'error': 'Unable to create room', 'status_code': res.status_code, 'text': res.text}), 500
+    print(f"Room created: ", res.json())
     room_url = res.json()['url']
     room_name = res.json()['name']
 
