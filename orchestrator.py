@@ -23,36 +23,35 @@ from constants import SYSTEM_PROMPT
 
 import base64
 # Function to encode the image
-def encode_image(image_path):
-  with open(image_path, "rb") as image_file:
-    return base64.b64encode(image_file.read()).decode('utf-8')
+
+
 
 # Path to your image
 image_path = "/Users/zakariaelhjouji/Downloads/hi1.png"
 
-# Getting the base64 string
-base64_image = encode_image(image_path)
+latest_roasts = "Your head is shaped like a pear."
 
 class Orchestrator():
-    def __init__(self, image_setter, microphone, ai_tts_service, ai_image_gen_service, ai_llm_service, story_id, logger):
+    def __init__(self, image_setter, microphone, ai_tts_service, ai_image_gen_service, ai_llm_service, roast_llm, story_id, logger):
         self.image_setter = image_setter
         self.microphone = microphone
 
         self.ai_tts_service = ai_tts_service
         self.ai_image_gen_service = ai_image_gen_service
         self.ai_llm_service = ai_llm_service
+        self.roast_llm = roast_llm
 
         self.search_indexer = SearchIndexer(story_id)
 
         self.tts_getter = None
         self.image_getter = None
 
-        self.messages = [
-            {
-                "role": "system", 
-                "content":SYSTEM_PROMPT}]
+        self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+        self.roast_system_message = [{"role": "system", "content": "You're the best roaster ever! Come up with 5 clever roasts."}]
         
         self.initial_message = "Hey there, what's up!"
+        self.roasts = None
 
         self.llm_response_thread = None
 
@@ -67,7 +66,7 @@ class Orchestrator():
 
 
     def handle_user_speech(self, user_speech):
-        self.logger.info(f"👅 Handling user speech: {user_speech}")
+        # self.logger.info(f"👅 Handling user speech: {user_speech}")
         if not self.llm_response_thread or not self.llm_response_thread.is_alive():
             self.enqueue(StopListeningScene)
             self.llm_response_thread = Thread(target=self.request_llm_response, args=(user_speech,))
@@ -86,19 +85,20 @@ class Orchestrator():
 
     def request_llm_response(self, user_speech):
         try:
+            message = f"""
+                User speech:
+                {user_speech}
+            """
+            if self.roasts:
+                message += f"""
+                    Possible roasts you can use:
+                    {self.roasts}
+                """
+                self.roasts = None
+
             self.messages.append({
                 "role": "user", 
-                "content": [
-                    {
-                        "type": "text", "text": user_speech
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{base64_image}"
-                        }
-                    }
-                    ]
+                "content": message
                 })
             response = self.ai_llm_service.run_llm(self.messages)
             self.handle_llm_response(response)
@@ -108,6 +108,16 @@ class Orchestrator():
     def request_intro(self):
         return self.ai_tts_service.run_tts(self.initial_message)
 
+    def request_roast(self, image_pil):
+        buffer = io.BytesIO()
+        image_pil.save(buffer, format='PNG')
+        img_bytes = buffer.getvalue()
+        b64image = base64.b64encode(img_bytes).decode('utf-8')
+        resp = self.roast_llm.run_llm(
+            self.roast_system_message, b64image=b64image, stream=False)
+        self.roasts = resp.choices[0].message.content
+        print('ROAASTTSSS ------- ', self.roasts)
+    
     def handle_llm_response(self, llm_response):
         out = ''
         full_response = ''
@@ -200,6 +210,10 @@ class Orchestrator():
         except Exception as e:
             self.logger.error(f"Exception in request_image: {e}")
 
+    def handle_video_frame(self, image_pil):
+        self.llm_roast_thread = Thread(target=self.request_roast, args=(image_pil,))
+        self.llm_roast_thread.start()
+    
     def request_image_description(self, story_sentences):
         if len(self.story_sentences) == 1:
             prompt = f"You are an illustrator for a children's story book. Generate a prompt for DALL-E to create an illustration for the first page of the book, which reads: \"{self.story_sentences[0]}\"\n\n Your response should start with the phrase \"Children's book illustration of\"."
@@ -218,7 +232,6 @@ class Orchestrator():
         self.logger.info(f"🎆 Resulting image prompt: {image_prompt}")
         self.logger.info(f"==== time to run llm for image generation {time.time() - start}")
         return image_prompt
-
 
     def handle_audio(self, audio):
         self.logger.info("!!! Starting speaking")

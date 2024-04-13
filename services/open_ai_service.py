@@ -13,11 +13,29 @@ class OpenAIService(AIService):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def run_llm(self, messages, stream = True):
-        messages_for_log = json.dumps(messages)
-        self.logger.error(f"==== generating chat via openai: {messages_for_log}")
+    def run_llm(self, messages=None, stream = True, b64image=None):
+        # messages_for_log = json.dumps(messages)
+        # self.logger.error(f"==== generating chat via openai: {messages_for_log}")
 
         model = os.getenv("OPEN_AI_MODEL")
+        if b64image:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "I like it when people roast me. Show me the best you can do."
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{b64image}"
+                        }
+                        }
+                    ]
+                }
+        )
         response = client.chat.completions.create(
             messages=messages,
             model=model,

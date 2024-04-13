@@ -76,7 +76,7 @@ class DailyLLM(EventHandler):
         self.camera_thread.start()
 
         self.logger.info("starting orchestrator")
-        self.orchestrator = Orchestrator(self, self.mic, self.tts, self.image_gen, self.llm, self.story_id, self.logger)
+        self.orchestrator = Orchestrator(self, self.mic, self.tts, self.image_gen, self.llm, self.roast_llm, self.story_id, self.logger)
         self.orchestrator.enqueue(StoryIntroScene)
         self.orchestrator.enqueue(StartListeningScene)
 
@@ -116,6 +116,7 @@ class DailyLLM(EventHandler):
         self.tts = config.services[os.getenv("TTS_SERVICE")]()
         self.image_gen = config.services[os.getenv("IMAGE_GEN_SERVICE")]()
         self.llm = config.services[os.getenv("LLM_SERVICE")]()
+        self.roast_llm = config.services[os.getenv("LLM_SERVICE")]()
 
     def configure_daily(self):
         Daily.init()
@@ -206,8 +207,10 @@ class DailyLLM(EventHandler):
         if time.time() - self.__time > 5:
             self.__time = time.time()
             # import ipdb; ipdb.set_trace()
-            save_frame(video_frame, int(self.__time))
-            print(video_frame)
+            # save_frame(video_frame, int(self.__time))
+            image_pil = Image.frombytes("RGBA", (video_frame.width, video_frame.height), video_frame.buffer)
+            self.orchestrator.handle_video_frame(image_pil)
+            # print(video_frame)
 
     def set_image(self, image):
         self.image = image
