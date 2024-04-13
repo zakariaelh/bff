@@ -18,11 +18,9 @@ class OpenAIService(AIService):
         self.logger.error(f"==== generating chat via openai: {messages_for_log}")
 
         model = os.getenv("OPEN_AI_MODEL")
-        if not model:
-            model = "gpt-4"
         response = client.chat.completions.create(
             messages=messages,
-            model="gpt-4",
+            model=model,
             stream=stream
         )
 

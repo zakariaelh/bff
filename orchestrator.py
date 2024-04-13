@@ -19,6 +19,20 @@ from scenes.start_listening_scene import StartListeningScene
 
 from threading import Thread
 
+from constants import SYSTEM_PROMPT
+
+import base64
+# Function to encode the image
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode('utf-8')
+
+# Path to your image
+image_path = "/Users/zakariaelhjouji/Downloads/hi1.png"
+
+# Getting the base64 string
+base64_image = encode_image(image_path)
+
 class Orchestrator():
     def __init__(self, image_setter, microphone, ai_tts_service, ai_image_gen_service, ai_llm_service, story_id, logger):
         self.image_setter = image_setter
@@ -33,8 +47,12 @@ class Orchestrator():
         self.tts_getter = None
         self.image_getter = None
 
-        self.messages = [{"role": "system", "content": "You are a storyteller who loves to make up fantastic, fun, and educational stories for children between the ages of 5 and 10 years old. Your stories are full of friendly, magical creatures. Your stories are never scary. Each sentence of your story will become a page in a storybook. Stop after 3-4 sentences and give the child a choice to make that will influence the next part of the story. Once the child responds, start by saying something nice about the choice they made, then include [start] in your response. Include [break] after each sentence of the story. Include [prompt] between the story and the prompt."}]
-        self.intro_messages = [{"role": "system", "content": "You are a storyteller who loves to make up fantastic, fun, and educational stories for children between the ages of 5 and 10 years old. Your stories are full of friendly, magical creatures. Your stories are never scary. Begin by asking what a child wants you to tell a story about."}]
+        self.messages = [
+            {
+                "role": "system", 
+                "content":SYSTEM_PROMPT}]
+        
+        self.initial_message = "Hey there, what's up!"
 
         self.llm_response_thread = None
 
@@ -68,27 +86,27 @@ class Orchestrator():
 
     def request_llm_response(self, user_speech):
         try:
-            self.messages.append({"role": "user", "content": user_speech})
+            self.messages.append({
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "text", "text": user_speech
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}"
+                        }
+                    }
+                    ]
+                })
             response = self.ai_llm_service.run_llm(self.messages)
             self.handle_llm_response(response)
         except Exception as e:
             self.logger.error(f"Exception in request_llm_response: {e}")
 
     def request_intro(self):
-        response = self.ai_llm_service.run_llm(self.intro_messages)
-        return self.handle_intro(response)
-
-    def handle_intro(self, llm_response):
-        # Do this all as one piece, at least for now
-        out = ''
-        for chunk in llm_response:
-            if len(chunk.choices) == 0:
-                continue
-            if chunk.choices[0].delta.content:
-                if chunk.choices[0].delta.content != {}: #streaming a content chunk
-                    next_chunk = chunk.choices[0].delta.content
-                    out += next_chunk
-        return self.ai_tts_service.run_tts(out)
+        return self.ai_tts_service.run_tts(self.initial_message)
 
     def handle_llm_response(self, llm_response):
         out = ''

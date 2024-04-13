@@ -55,7 +55,7 @@ class DailyLLM(EventHandler):
         FORMAT = f'%(asctime)s {room_name} %(message)s'
         logging.basicConfig(format=FORMAT)
         self.logger = logging.getLogger('bot-instance')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.WARN)
 
         self.logger.info(f"Joining as {self.bot_name}")
         self.logger.info(f"expiration: {datetime.utcfromtimestamp(self.expiration).strftime('%Y-%m-%d %H:%M:%S')}")
@@ -199,13 +199,14 @@ class DailyLLM(EventHandler):
                     self.last_fragment_at = time.time()
 
     def on_app_message(self, message, sender):
-        self.orchestrator.enqueue(StoryGrandmaScene, sentence=message['message'])
-        # print(message)
-        pass 
+        if message.get('message'):
+            self.orchestrator.enqueue(StoryGrandmaScene, sentence=message['message'])
 
     def on_video_frame(self, participant_id, video_frame):
-        if time.time() - self.__time > 1:
+        if time.time() - self.__time > 5:
             self.__time = time.time()
+            # import ipdb; ipdb.set_trace()
+            save_frame(video_frame, int(self.__time))
             print(video_frame)
 
     def set_image(self, image):
@@ -230,6 +231,16 @@ class DailyLLM(EventHandler):
                 "id": time.time(),
             }
         })
+
+from PIL import Image
+
+def save_frame(vf, title):
+    # with open(f"/Users/zakariaelhjouji/Downloads/{title}", "wb") as binary_file:
+    #     # Write bytes to file
+    #     binary_file.write(b)
+    image = Image.frombytes("RGBA", (vf.width, vf.height), vf.buffer)
+    image.save('/Users/zakariaelhjouji/Downloads/hi.png')
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Daily LLM bot")
