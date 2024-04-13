@@ -13,7 +13,7 @@ class OpenAIService(AIService):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def run_llm(self, messages=None, stream = True, b64image=None):
+    def run_llm(self, messages=None, stream = True, b64image=None, text_for_image=None):
         # messages_for_log = json.dumps(messages)
         # self.logger.error(f"==== generating chat via openai: {messages_for_log}")
 
@@ -25,7 +25,7 @@ class OpenAIService(AIService):
                     "content": [
                         {
                             "type": "text",
-                            "text": "I like it when people roast me. Show me the best you can do."
+                            "text": {text_for_image}
                         },
                         {
                             "type": "image_url",

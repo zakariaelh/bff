@@ -122,13 +122,13 @@ class Orchestrator():
 
     def request_roast(self, b64image):
         resp = self.roast_llm.run_llm(
-            self.roast_system_message, b64image=b64image, stream=False)
+            self.roast_system_message, b64image=b64image, stream=False, text_for_image="I like it when people roast me. Show me the best you can do.")
         self.roasts = resp.choices[0].message.content
         print('ROAASTTSSS ------- ', self.roasts)
 
     def request_compliment(self, b64image):
         resp = self.compliment_llm.run_llm(
-            self.compliment_system_message, b64image=b64image, stream=False)
+            self.compliment_system_message, b64image=b64image, stream=False, text_for_image="Give me compliments about my physical appearance.")
         self.compliments = resp.choices[0].message.content
         print('COMPLIMENTS ------- ', self.compliments)
     
