@@ -18,6 +18,8 @@ from scenes.start_listening_scene import StartListeningScene
 from auth import get_meeting_token, get_room_name
 
 from scenes.story_grandma_scene import StoryGrandmaScene
+import io
+import base64
 
 load_dotenv()
 
@@ -76,7 +78,7 @@ class DailyLLM(EventHandler):
         self.camera_thread.start()
 
         self.logger.info("starting orchestrator")
-        self.orchestrator = Orchestrator(self, self.mic, self.tts, self.image_gen, self.llm, self.roast_llm, self.story_id, self.logger)
+        self.orchestrator = Orchestrator(self, self.mic, self.tts, self.image_gen, self.llm, self.roast_llm, self.story_id, self.logger, self.compliment_llm)
         self.orchestrator.enqueue(StoryIntroScene)
         self.orchestrator.enqueue(StartListeningScene)
 
@@ -117,6 +119,7 @@ class DailyLLM(EventHandler):
         self.image_gen = config.services[os.getenv("IMAGE_GEN_SERVICE")]()
         self.llm = config.services[os.getenv("LLM_SERVICE")]()
         self.roast_llm = config.services[os.getenv("LLM_SERVICE")]()
+        self.compliment_llm = config.services[os.getenv("LLM_SERVICE")]()
 
     def configure_daily(self):
         Daily.init()
@@ -204,12 +207,16 @@ class DailyLLM(EventHandler):
             self.orchestrator.enqueue(StoryGrandmaScene, sentence=message['message'])
 
     def on_video_frame(self, participant_id, video_frame):
-        if time.time() - self.__time > 5:
+        if time.time() - self.__time > 10:
             self.__time = time.time()
             # import ipdb; ipdb.set_trace()
             # save_frame(video_frame, int(self.__time))
             image_pil = Image.frombytes("RGBA", (video_frame.width, video_frame.height), video_frame.buffer)
-            self.orchestrator.handle_video_frame(image_pil)
+            buffer = io.BytesIO()
+            image_pil.save(buffer, format='PNG')
+            img_bytes = buffer.getvalue()
+            b64image = base64.b64encode(img_bytes).decode('utf-8')
+            self.orchestrator.handle_video_frame(b64image)
             # print(video_frame)
 
     def set_image(self, image):

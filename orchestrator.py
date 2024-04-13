@@ -19,7 +19,7 @@ from scenes.start_listening_scene import StartListeningScene
 
 from threading import Thread
 
-from constants import SYSTEM_PROMPT
+from constants import FRIENDLY_PROMPT, ROASTER_PROMT, COMPLIMENT_PROMPT
 
 import base64
 # Function to encode the image
@@ -32,7 +32,7 @@ image_path = "/Users/zakariaelhjouji/Downloads/hi1.png"
 latest_roasts = "Your head is shaped like a pear."
 
 class Orchestrator():
-    def __init__(self, image_setter, microphone, ai_tts_service, ai_image_gen_service, ai_llm_service, roast_llm, story_id, logger):
+    def __init__(self, image_setter, microphone, ai_tts_service, ai_image_gen_service, ai_llm_service, roast_llm, story_id, logger, compliment_llm):
         self.image_setter = image_setter
         self.microphone = microphone
 
@@ -40,18 +40,22 @@ class Orchestrator():
         self.ai_image_gen_service = ai_image_gen_service
         self.ai_llm_service = ai_llm_service
         self.roast_llm = roast_llm
+        self.compliment_llm = compliment_llm
 
         self.search_indexer = SearchIndexer(story_id)
 
         self.tts_getter = None
         self.image_getter = None
 
-        self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self.messages = [{"role": "system", "content": FRIENDLY_PROMPT}]
 
-        self.roast_system_message = [{"role": "system", "content": "You're the best roaster ever! Come up with 5 clever roasts."}]
+        # self.roast_system_message = [{"role": "system", "content": "You're the best roaster ever! Come up with 5 clever roasts."}]
+        self.roast_system_message = [{"role": "system", "content": ROASTER_PROMT}]
+        self.compliment_system_message = [{"role": "system", "content": COMPLIMENT_PROMPT}]
         
         self.initial_message = "Hey there, what's up!"
         self.roasts = None
+        self.compliments = None
 
         self.llm_response_thread = None
 
@@ -89,12 +93,20 @@ class Orchestrator():
                 User speech:
                 {user_speech}
             """
-            if self.roasts:
-                message += f"""
-                    Possible roasts you can use:
-                    {self.roasts}
-                """
-                self.roasts = None
+            rd = random.random()
+            if rd > 0.5:
+                if rd > 0.75 and self.roasts:
+                    message += f"""
+                        Possible roasts you can use:
+                        {self.roasts}
+                    """
+                    self.roasts = None
+                elif rd < 0.75 and self.compliments:
+                    message += f"""
+                        Possible compliments you can use:
+                        {self.compliments}
+                    """
+                    self.compliments = None
 
             self.messages.append({
                 "role": "user", 
@@ -108,15 +120,17 @@ class Orchestrator():
     def request_intro(self):
         return self.ai_tts_service.run_tts(self.initial_message)
 
-    def request_roast(self, image_pil):
-        buffer = io.BytesIO()
-        image_pil.save(buffer, format='PNG')
-        img_bytes = buffer.getvalue()
-        b64image = base64.b64encode(img_bytes).decode('utf-8')
+    def request_roast(self, b64image):
         resp = self.roast_llm.run_llm(
             self.roast_system_message, b64image=b64image, stream=False)
         self.roasts = resp.choices[0].message.content
         print('ROAASTTSSS ------- ', self.roasts)
+
+    def request_compliment(self, b64image):
+        resp = self.compliment_llm.run_llm(
+            self.compliment_system_message, b64image=b64image, stream=False)
+        self.compliments = resp.choices[0].message.content
+        print('COMPLIMENTS ------- ', self.compliments)
     
     def handle_llm_response(self, llm_response):
         out = ''
@@ -210,9 +224,11 @@ class Orchestrator():
         except Exception as e:
             self.logger.error(f"Exception in request_image: {e}")
 
-    def handle_video_frame(self, image_pil):
-        self.llm_roast_thread = Thread(target=self.request_roast, args=(image_pil,))
+    def handle_video_frame(self, b64frame):
+        self.llm_roast_thread = Thread(target=self.request_roast, args=(b64frame,))
         self.llm_roast_thread.start()
+        self.llm_compliment_thread = Thread(target=self.request_compliment, args=(b64frame,))
+        self.llm_compliment_thread.start()
     
     def request_image_description(self, story_sentences):
         if len(self.story_sentences) == 1:
