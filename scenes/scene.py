@@ -26,8 +26,8 @@ class Scene:
 
 		# everybody needs a grandma now and then
 		script_dir = os.path.dirname(__file__)
-		listening_path = "../grandma-listening.png"
-		writing_path = "../grandma-writing.png"
+		listening_path = "../listen1.jpg"
+		writing_path = "../lecture1.jpg"
 		listening_path = os.path.join(script_dir, listening_path)
 		writing_path = os.path.join(script_dir, writing_path)
 		self.grandma_listening = Image.open(listening_path)
