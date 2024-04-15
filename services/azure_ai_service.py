@@ -20,7 +20,7 @@ class AzureAIService(AIService):
         self.speech_region = os.getenv("AZURE_SPEECH_SERVICE_REGION")
 
         self.speech_config = SpeechConfig(subscription=self.speech_key, region=self.speech_region)
-        # self.speech_config.speech_synthesis_voice_name='en-US-JennyMultilingualV2Neural'
+        self.speech_config.speech_synthesis_voice_name='en-US-JennyMultilingualV2Neural'
 
         self.speech_synthesizer = SpeechSynthesizer(speech_config=self.speech_config, audio_config=None)
 
@@ -45,7 +45,7 @@ class AzureAIService(AIService):
             self.logger.info("Speech synthesis canceled: {}".format(cancellation_details.reason))
             if cancellation_details.reason == CancellationReason.Error:
                 self.logger.info("Error details: {}".format(cancellation_details.error_details))
-
+    
     # generate a chat using Azure OpenAI based on the participant's most recent speech
     def run_llm(self, messages, stream = True):
         messages_for_log = json.dumps(messages)

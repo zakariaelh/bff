@@ -19,7 +19,7 @@ from scenes.start_listening_scene import StartListeningScene
 
 from threading import Thread
 
-from constants import FRIENDLY_PROMPT, ROASTER_PROMT, COMPLIMENT_PROMPT
+from constants import *
 
 import base64
 # Function to encode the image
@@ -66,6 +66,7 @@ class Orchestrator():
         self.story_sentences = []
 
         self.logger = logger
+        self.roast_mode = False
 
 
 
@@ -94,24 +95,29 @@ class Orchestrator():
                 {user_speech}
             """
             rd = random.random()
-            if rd > 0.5:
-                if rd > 0.75 and self.roasts:
+            if rd > 0.2:
+                if (rd > 0.4 and self.roasts) or self.roast_mode:
+                    self.roast_mode = True
+                    print('-----ROAST MODE')
                     message += f"""
-                        Possible roasts you can use:
+                        here are some example roasts you can use to reply:
                         {self.roasts}
+
+                        pick visuals roasts one or two to form a reply to the user. 
                     """
                     self.roasts = None
-                elif rd < 0.75 and self.compliments:
+                elif rd < 0.4 and self.compliments:
                     message += f"""
                         Possible compliments you can use:
                         {self.compliments}
                     """
                     self.compliments = None
-
+                
             self.messages.append({
                 "role": "user", 
                 "content": message
                 })
+            print('-----MESSAGES', message)
             response = self.ai_llm_service.run_llm(self.messages)
             self.handle_llm_response(response)
         except Exception as e:
@@ -121,14 +127,40 @@ class Orchestrator():
         return self.ai_tts_service.run_tts(self.initial_message)
 
     def request_roast(self, b64image):
+        # context = []
+        # for i in self.messages:
+        #     if i['role'] == 'assistant':
+        #         context.append(f'you: {i["content"]}')
+        #     elif i['role'] == 'user':
+        #         context.append(f'heckler: {i["content"]}')
+
+        # text_for_image = f"""
+        # conversation so far: 
+        # {''.join(context)}
+
+        # Take care of these heckler(s). Here's their picture.
+        # """
+        text_for_image = f"""
+        I love to get roasted. give me your best roast.
+        """
         resp = self.roast_llm.run_llm(
-            self.roast_system_message, b64image=b64image, stream=False, text_for_image="I like it when people roast me. Show me the best you can do.")
+            self.roast_system_message, b64image=b64image, stream=False, text_for_image=text_for_image)
         self.roasts = resp.choices[0].message.content
         print('ROAASTTSSS ------- ', self.roasts)
 
     def request_compliment(self, b64image):
+        # context = []
+        # for i in self.messages:
+        #     if i['role'] == 'assistant':
+        #         context.append(f'you: {i["content"]}')
+        #     elif i['role'] == 'user':
+        #         context.append(f'me: {i["content"]}')
+
+        text_for_image = f"""
+        I uploaded the picture if you want to give me a compliment in-context.
+        """
         resp = self.compliment_llm.run_llm(
-            self.compliment_system_message, b64image=b64image, stream=False, text_for_image="Give me compliments about my physical appearance.")
+            self.compliment_system_message, b64image=b64image, stream=False, text_for_image=text_for_image)
         self.compliments = resp.choices[0].message.content
         print('COMPLIMENTS ------- ', self.compliments)
     

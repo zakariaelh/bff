@@ -4,6 +4,7 @@ from services.open_ai_service import OpenAIService
 from services.huggingface_ai_service import HuggingFaceAIService
 from services.mock_ai_service import MockAIService
 from services.playht_ai_service import PlayHTAIService
+from services.eleven_labs import ElevenLabsTTSService
 
 services = {
     "azure": AzureAIService,
@@ -12,4 +13,5 @@ services = {
     "huggingface": HuggingFaceAIService,
     "mock": MockAIService,
     "playht": PlayHTAIService,
+    "elevenlabs": ElevenLabsTTSService
 }

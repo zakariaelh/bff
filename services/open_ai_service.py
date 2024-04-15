@@ -7,6 +7,8 @@ from openai import OpenAI
 import time
 import json
 
+import base64 
+
 client = OpenAI(api_key=os.getenv("OPEN_AI_KEY"))
 
 class OpenAIService(AIService):
@@ -25,7 +27,7 @@ class OpenAIService(AIService):
                     "content": [
                         {
                             "type": "text",
-                            "text": {text_for_image}
+                            "text": text_for_image
                         },
                         {
                             "type": "image_url",
@@ -36,6 +38,7 @@ class OpenAIService(AIService):
                     ]
                 }
         )
+            
         response = client.chat.completions.create(
             messages=messages,
             model=model,

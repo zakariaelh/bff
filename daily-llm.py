@@ -115,7 +115,8 @@ class DailyLLM(EventHandler):
     def configure_ai_services(self):
         self.story_id = hex(random.getrandbits(128))[2:]
 
-        self.tts = config.services[os.getenv("TTS_SERVICE")]()
+        # self.tts = config.services[os.getenv("TTS_SERVICE")]()
+        self.tts = config.services["elevenlabs"]()
         self.image_gen = config.services[os.getenv("IMAGE_GEN_SERVICE")]()
         self.llm = config.services[os.getenv("LLM_SERVICE")]()
         self.roast_llm = config.services[os.getenv("LLM_SERVICE")]()
@@ -207,11 +208,12 @@ class DailyLLM(EventHandler):
             self.orchestrator.enqueue(StoryGrandmaScene, sentence=message['message'])
 
     def on_video_frame(self, participant_id, video_frame):
-        if time.time() - self.__time > 10:
+        if time.time() - self.__time > 5:
             self.__time = time.time()
             # import ipdb; ipdb.set_trace()
             # save_frame(video_frame, int(self.__time))
             image_pil = Image.frombytes("RGBA", (video_frame.width, video_frame.height), video_frame.buffer)
+            image_pil.save(f'/Users/zakariaelhjouji/Downloads/{int(self.__time)}.png')
             buffer = io.BytesIO()
             image_pil.save(buffer, format='PNG')
             img_bytes = buffer.getvalue()
